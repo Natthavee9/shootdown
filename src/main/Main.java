@@ -2,7 +2,7 @@ package main;
 import javax.swing.*;
 
 public class Main {
-      public static void main(String[] args) {
+      public  void main(String[] args) {
             // 1. Create the game window
             JFrame window = new JFrame();
             window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); // Exit application when the close button is clicked

@@ -1,5 +1,8 @@
 package entity;
 
-public class GameOBJ {
+import java.awt.*;
+public abstract class GameOBJ {
+      
+
       
 }
