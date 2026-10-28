@@ -1,5 +1,4 @@
 package entity;
-
 import java.awt.*;
 
 // Abstract base class representing any interactive entity/object in the game

@@ -12,6 +12,10 @@ public class Bullet extends GameOBJ {
             this.x = startX;
             this.y = startY;
             this.direction = direction;
+            this.width = 16;
+            this.height = 16;
+            this.speed = 8;
+            this.hitbox = new Rectangle(x, y, width, height);
       }
 
       @Override
@@ -20,8 +24,10 @@ public class Bullet extends GameOBJ {
             x += speed * direction;
 
             // Synchronize hitbox position with bullet coordinates
-            hitbox.x = x;
-            hitbox.y = y;
+            if (hitbox != null) {
+                  hitbox.x = x;
+                  hitbox.y = y;
+            }
       }
 
       @Override

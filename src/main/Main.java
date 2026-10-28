@@ -1,23 +1,25 @@
 package main;
+
 import javax.swing.*;
 
 public class Main {
       public static void main(String[] args) {
             // 1. Create the game window
             JFrame window = new JFrame();
-            window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); // Exit application when the close button is clicked
-            window.setResizable(false); // Lock window size to prevent resolution distortion
-            window.setTitle("Shootdown"); // Set window title
+            window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            window.setResizable(false);
+            window.setTitle("Shootdown");
 
-            // 2. Add GamePanel (game logic and graphics) to the window
+            // 2. Add GamePanel (game canvas & logic)
             GamePanel gamePanel = new GamePanel();
             window.add(gamePanel);
 
-            // 3. Configure window size and display settings
+            // 3. Configure window display
             window.pack();
-            window.setLocationRelativeTo(null); // Center the window on the screen
-            window.setVisible(true); // Make the window visible
+            window.setLocationRelativeTo(null); // Center on screen
+            window.setVisible(true);
 
-            
+            // 4. Start the 60 FPS game loop thread
+            gamePanel.startGameThread();
       }
 }
