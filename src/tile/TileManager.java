@@ -26,20 +26,20 @@ public class TileManager {
                   { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
                   { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 
-                  // R5 (y = 320..384): High turret (c4,5), pipe catwalk (c6..9), top ladder catwalk (c12..14)
-                  { 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0 },
+                  // R5 (y = 320..384): High turret (c5), pipe catwalk (c6..9), top ladder catwalk (c12..14)
+                  { 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0 },
 
-                  // R6 (y = 384..448): Platform 1 (c2..4), pipe catwalk (c6..9), barrel ledge (c11,12), crates (c15,16)
-                  { 0, 0, 2, 2, 2, 0, 2, 2, 2, 2, 0, 2, 2, 0, 0, 4, 4, 0, 0, 0 },
+                  // R6 (y = 384..448): Platform 1 (c2,3), mid turret (c5,6), pipe catwalk (c6..9), barrel ledge (c11,12)
+                  { 0, 0, 2, 2, 0, 2, 2, 2, 2, 2, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0 },
 
-                  // R7 (y = 448..512): Left brick ledge (c0,1), bridge over acid (c5..8), main sewer ground (c9..16), door floor (c17..19)
-                  { 1, 1, 0, 0, 0, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+                  // R7 (y = 448..512): Left brick (c0,1), bridge/walkway (c5..9), acid gap 2 (c10), sewer ground (c11..16), door floor (c17..19)
+                  { 1, 1, 0, 0, 0, 2, 2, 2, 2, 2, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
 
-                  // R8 - R11 (y = 512..768): Underground base & Acid pit (cols 2..4 is acid)
-                  { 1, 1, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-                  { 1, 1, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-                  { 1, 1, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-                  { 1, 1, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 }
+                  // R8 - R11 (y = 512..768): Underground base & Acid pit (cols 2..10 is acid)
+                  { 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+                  { 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+                  { 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+                  { 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1 }
       };
 
       // Level 2 map layout (alternative stage)
@@ -118,6 +118,75 @@ public class TileManager {
             return mapTileNum[col][row];
       }
 
+      // Structured platform representation for pixel-exact platformer physics
+      public static class PlatformLedge {
+            public final String name;
+            public final int minX, maxX;
+            public final int surfaceY;
+            public final boolean isSolidGround; // true = ground/crate, false = jump-through/drop-through platform
+
+            public PlatformLedge(String name, int minX, int maxX, int surfaceY, boolean isSolidGround) {
+                  this.name = name;
+                  this.minX = minX;
+                  this.maxX = maxX;
+                  this.surfaceY = surfaceY;
+                  this.isSolidGround = isSolidGround;
+            }
+      }
+
+      // Exact pixel bounds and standing heights of all platforms in map_sewer_lab.png
+      public final PlatformLedge[] platforms = {
+            new PlatformLedge("Left Spawn Ledge", 0, 130, 454, true),
+            new PlatformLedge("1. Platform 1", 130, 260, 398, false),
+            new PlatformLedge("2. High Turret Platform", 325, 418, 324, false),
+            new PlatformLedge("3. Mid Turret Platform", 368, 438, 408, false),
+            new PlatformLedge("4. Pipe Catwalk", 440, 660, 374, false),
+            new PlatformLedge("5. Lower Bridge Walkway", 365, 660, 478, false),
+            new PlatformLedge("6. Barrel Ledge", 715, 830, 402, false),
+            new PlatformLedge("7. Top Roof Catwalk", 770, 945, 320, false),
+            new PlatformLedge("8. Right Sewer Ground", 718, 1080, 478, true),
+            new PlatformLedge("8b. Bunker Door Floor", 1080, 1280, 484, true)
+      };
+
+      // Query if an entity's feet can land on any valid platform surface
+      public int getLandingSurfaceY(int footLeftX, int footRightX, int currentFeetY, int nextFeetY, boolean allowDropThrough) {
+            int bestSurfaceY = -1;
+            int minDiff = Integer.MAX_VALUE;
+            int footCenterX = (footLeftX + footRightX) / 2;
+
+            for (PlatformLedge p : platforms) {
+                  // Player center of mass must be horizontally supported by platform
+                  if (footCenterX >= p.minX && footCenterX <= p.maxX) {
+                        // Skip floating platform when actively dropping through
+                        if (!p.isSolidGround && !allowDropThrough) {
+                              continue;
+                        }
+                        // Check landing within downward movement range (+8px step tolerance)
+                        if (currentFeetY <= p.surfaceY + 8 && nextFeetY >= p.surfaceY - 4) {
+                              int diff = Math.abs(currentFeetY - p.surfaceY);
+                              if (diff < minDiff) {
+                                    minDiff = diff;
+                                    bestSurfaceY = p.surfaceY;
+                              }
+                        }
+                  }
+            }
+            return bestSurfaceY;
+      }
+
+      // Query if the platform beneath entity feet allows drop-through (Down / S key)
+      public boolean canDropThrough(int footLeftX, int footRightX, int currentFeetY) {
+            int footCenterX = (footLeftX + footRightX) / 2;
+            for (PlatformLedge p : platforms) {
+                  if (!p.isSolidGround && footCenterX >= p.minX && footCenterX <= p.maxX) {
+                        if (Math.abs(currentFeetY - p.surfaceY) <= 8) {
+                              return true;
+                        }
+                  }
+            }
+            return false;
+      }
+
       // Returns the exact pixel Y of the standing surface for the given tile
       public int getSurfaceY(int col, int row) {
             if (col < 0 || col >= maxScreenCol || row < 0 || row >= maxScreenRow) {
@@ -128,20 +197,20 @@ public class TileManager {
                   return (row + 1) * tileSize;
             }
 
-            // Row 5: High platforms (Turret cols 4-5, Catwalk cols 6-9, Top catwalk cols 12-14)
+            // Row 5: High platforms (Turret col 5, Catwalk cols 6-9, Top catwalk cols 12-14)
             if (row == 5) {
-                  if (col >= 4 && col <= 5) return 324; // Turret platform
+                  if (col == 5) return 324; // Turret platform (col 5)
                   if (col >= 6 && col <= 9) return 374; // Pipe Catwalk (aligned to caution walkway)
                   if (col >= 12 && col <= 14) return 320; // Top ladder catwalk
                   return 320;
             }
 
-            // Row 6: Mid platforms (Platform 1 cols 2-4, Catwalk cols 6-9, Barrel ledge cols 11-12, Crates cols 15-16)
+            // Row 6: Mid platforms (Platform 1 cols 2-3, Mid turret col 5, Catwalk cols 6-9, Barrel ledge cols 11-12)
             if (row == 6) {
-                  if (col >= 2 && col <= 4) return 380; // Platform 1
+                  if (col >= 2 && col <= 3) return 398; // Platform 1 (cols 2-3 only; col 4 is open acid gap!)
+                  if (col == 5) return 408; // Mid Turret platform (caution slab)
                   if (col >= 6 && col <= 9) return 374; // Pipe Catwalk surface
                   if (col >= 11 && col <= 12) return 402; // Barrel ledge
-                  if (col >= 15 && col <= 16) return 406; // Top of stacked crates
                   return 384;
             }
 
@@ -149,9 +218,9 @@ public class TileManager {
             if (row == 7) {
                   if (col <= 1) {
                         return 454; // Left brick spawn ledge
-                  } else if (col >= 5 && col <= 8) {
+                  } else if (col >= 5 && col <= 9) {
                         return 478; // Lower bridge walkway over toxic acid
-                  } else if (col >= 9 && col <= 16) {
+                  } else if (col >= 11 && col <= 16) {
                         return 478; // Main sewer stone ground & crate base
                   } else if (col >= 17) {
                         return 484; // Green moss floor in front of laboratory bunker door

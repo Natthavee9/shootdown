@@ -60,11 +60,11 @@ public class GamePanel extends JPanel implements Runnable {
       public void setupEnemies() {
             enemies.clear();
 
-            // 1. Snail crawling on Platform 1 (surface is at y = 380, touching walkway directly)
-            enemies.add(new Enemy(this, "snail", 160, 342, 130, 205));
+            // 1. Snail crawling on Platform 1 (surface is at y = 398, touching caution floor directly)
+            enemies.add(new Enemy(this, "snail", 160, 360, 130, 230));
 
             // 2. Octopus guarding the Turret Platform (surface is at y = 324)
-            enemies.add(new Enemy(this, "octopus", 280, 274, 260, 330));
+            enemies.add(new Enemy(this, "octopus", 350, 274, 320, 400));
 
             // 3. Octopus patrolling the Pipe Catwalk (surface is at y = 374, touching caution walkway directly)
             enemies.add(new Enemy(this, "octopus", 440, 324, 390, 520));
@@ -79,7 +79,7 @@ public class GamePanel extends JPanel implements Runnable {
             enemies.add(new Enemy(this, "octopus", 830, 270, 775, 895));
 
             // 7. Snail crawling on the Right Sewer Floor (surface is at y = 478, touching stone floor directly)
-            enemies.add(new Enemy(this, "snail", 740, 440, 660, 880));
+            enemies.add(new Enemy(this, "snail", 760, 440, 730, 880));
 
             // 8. Snake slithering on the Right Floor near crates (surface is at y = 478, touching stone floor directly)
             enemies.add(new Enemy(this, "snake_slither", 950, 447, 900, 1080));

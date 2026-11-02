@@ -215,16 +215,13 @@ public class Player extends GameOBJ {
             // 2. Drop through floating platform (Tile 2) when pressing Down (S key)
             if (keyH.downPress && !isJumping && gp.tileM != null) {
                   int currentFeetY = y + height;
-                  int footRow = currentFeetY / gp.tileM.tileSize;
-                  int col1 = (hitbox.x + 4) / gp.tileM.tileSize;
-                  int col2 = (hitbox.x + hitbox.width - 4) / gp.tileM.tileSize;
-                  int t1 = gp.tileM.getTileType(col1, footRow);
-                  int t2 = gp.tileM.getTileType(col2, footRow);
-                  if (t1 == 2 || t2 == 2) {
+                  int footLeftX = hitbox.x + 4;
+                  int footRightX = hitbox.x + hitbox.width - 4;
+                  if (gp.tileM.canDropThrough(footLeftX, footRightX, currentFeetY)) {
                         y += 8;
                         ySpeed = 3;
                         isJumping = true;
-                        dropThroughCooldown = 15;
+                        dropThroughCooldown = 8;
                   }
             }
 
@@ -266,56 +263,36 @@ public class Player extends GameOBJ {
                   ySpeed += 1; // Fast fall
             }
 
-            // 5. Vertical landing & standing on map tiles (aligned to exact visual floor heights)
+            // 5. Vertical landing & standing on map platforms (exact pixel surface alignment)
             if (gp.tileM != null) {
-                  int tileSize = gp.tileM.tileSize;
-
                   if (ySpeed >= 0) { // Falling or standing on surface
                         int currentFeetY = y + height;
                         int nextFeetY = currentFeetY + ySpeed;
-                        int col1 = Math.max(0, (hitbox.x + 4) / tileSize);
-                        int col2 = Math.min(gp.tileM.maxScreenCol - 1, (hitbox.x + hitbox.width - 4) / tileSize);
+                        int footLeftX = hitbox.x + 4;
+                        int footRightX = hitbox.x + hitbox.width - 4;
+                        boolean allowDropThrough = (dropThroughCooldown <= 0);
 
-                        boolean landed = false;
-                        int startRow = Math.max(0, (currentFeetY - 12) / tileSize);
-                        int endRow = Math.min(gp.tileM.maxScreenRow - 1, (nextFeetY + 8) / tileSize);
-                        for (int r = startRow; r <= endRow; r++) {
-                              if (r >= 0 && r < gp.tileM.maxScreenRow) {
-                                    for (int c = col1; c <= col2; c++) {
-                                          int t = gp.tileM.getTileType(c, r);
-                                          // Solid ground (1), wooden crate (4), or platform (2 when not dropping through)
-                                          if (t == 1 || t == 4 || (t == 2 && dropThroughCooldown <= 0)) {
-                                                int platSurfaceY = gp.tileM.getSurfaceY(c, r);
-                                                // Check landing and smooth step-up/step-down
-                                                if (currentFeetY <= platSurfaceY + 8 && nextFeetY >= platSurfaceY - 4) {
-                                                      y = platSurfaceY - height;
-                                                      ySpeed = 0;
-                                                      isJumping = false;
-                                                      landed = true;
-                                                      break;
-                                                }
-                                          }
-                                    }
-                                    if (landed) break;
-                              }
-                        }
-
-                        if (!landed) {
+                        int landingSurface = gp.tileM.getLandingSurfaceY(footLeftX, footRightX, currentFeetY, nextFeetY, allowDropThrough);
+                        if (landingSurface != -1) {
+                              y = landingSurface - height;
+                              ySpeed = 0;
+                              isJumping = false;
+                        } else {
                               y += ySpeed;
                               isJumping = true;
                         }
                   } else { // Jumping upward
                         int headY = y + 8 + ySpeed;
-                        int headRow = headY / tileSize;
-                        int col1 = Math.max(0, (hitbox.x + 4) / tileSize);
-                        int col2 = Math.min(gp.tileM.maxScreenCol - 1, (hitbox.x + hitbox.width - 4) / tileSize);
+                        int headRow = headY / gp.tileM.tileSize;
+                        int col1 = Math.max(0, (hitbox.x + 4) / gp.tileM.tileSize);
+                        int col2 = Math.min(gp.tileM.maxScreenCol - 1, (hitbox.x + hitbox.width - 4) / gp.tileM.tileSize);
                         boolean hitCeiling = false;
 
                         if (headRow >= 0 && headRow < gp.tileM.maxScreenRow) {
                               for (int c = col1; c <= col2; c++) {
                                     int t = gp.tileM.getTileType(c, headRow);
                                     if (t == 1) { // Only solid ceiling blocks upward jump
-                                          y = (headRow + 1) * tileSize - 8;
+                                          y = (headRow + 1) * gp.tileM.tileSize - 8;
                                           ySpeed = 0;
                                           hitCeiling = true;
                                           break;
@@ -342,6 +319,13 @@ public class Player extends GameOBJ {
                   int footCol = (hitbox.x + hitbox.width / 2) / gp.tileM.tileSize;
                   if (footRow >= 0 && footRow < gp.tileM.maxScreenRow && footCol >= 0 && footCol < gp.tileM.maxScreenCol) {
                         if (gp.tileM.getTileType(footCol, footRow) == 3) {
+                              respawn();
+                        }
+                  }
+                  // Exact pixel check for acid pit falling
+                  if (currentFeetY >= 480) {
+                        int footCenterX = hitbox.x + hitbox.width / 2;
+                        if ((footCenterX >= 255 && footCenterX <= 365) || (footCenterX >= 660 && footCenterX <= 720)) {
                               respawn();
                         }
                   }
