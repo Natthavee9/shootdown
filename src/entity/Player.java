@@ -25,7 +25,7 @@ public class Player extends GameOBJ {
       public boolean isJumping = false;
       public int ySpeed = 0;              // Vertical velocity for jumping & gravity
       public final int gravity = 1;       // Gravity acceleration
-      public final int jumpStrength = -14;// Upward impulse
+      public final int jumpStrength = -15;// Upward impulse (allows clearing pillars and platforms comfortably)
       public final int maxFallSpeed = 12; // Terminal fall velocity
 
       // Cooldown timer to allow dropping through floating platforms (Tile 2)
@@ -59,10 +59,10 @@ public class Player extends GameOBJ {
             height = 76;
             speed = 4;
 
-            // Spawn player standing flush on the left brick ledge (y = 454)
-            int spawnSurfaceY = 454;
-            x = 40;
-            y = spawnSurfaceY - height; // 378
+            // Spawn player standing flush on the starting ledge
+            int spawnSurfaceY = (gp != null && gp.currentStage == 2) ? 547 : 454;
+            x = (gp != null && gp.currentStage == 2) ? 60 : 40;
+            y = spawnSurfaceY - height;
 
             // Hitbox centered horizontally, with bottom kept slightly above feet to prevent floor snagging
             hitbox = new Rectangle(x + 10, y + 8, width - 20, height - 12);
@@ -72,11 +72,19 @@ public class Player extends GameOBJ {
             invincibleCounter = 0;
       }
 
-      // Respawn player on the left ledge after falling into acid or pit
+      // Player dies immediately when falling off map or into acid
+      public void die() {
+            life = 0;
+            if (gp != null) {
+                  gp.gameOver = true;
+            }
+      }
+
+      // Respawn player on the starting ledge after restarting game
       public void respawn() {
-            int spawnSurfaceY = 454;
-            x = 40;
-            y = spawnSurfaceY - height; // 378
+            int spawnSurfaceY = (gp != null && gp.currentStage == 2) ? 547 : 454;
+            x = (gp != null && gp.currentStage == 2) ? 60 : 40;
+            y = spawnSurfaceY - height;
             ySpeed = 0;
             isJumping = false;
             dropThroughCooldown = 0;
@@ -84,6 +92,7 @@ public class Player extends GameOBJ {
             life = maxLife;
             invincible = false;
             invincibleCounter = 0;
+            direction = "right";
             if (hitbox != null) {
                   hitbox.x = x + 10;
                   hitbox.y = y + 8;
@@ -312,27 +321,39 @@ public class Player extends GameOBJ {
             hitbox.x = x + 10;
             hitbox.y = y + 8;
 
-            // 6. Hazard & pit check (Tile 3 = Acid pool)
+            // 6. Hazard & pit check (Tile 3 = Acid pool & Map Boundary Pit)
             if (gp.tileM != null) {
                   int currentFeetY = y + height;
                   int footRow = currentFeetY / gp.tileM.tileSize;
                   int footCol = (hitbox.x + hitbox.width / 2) / gp.tileM.tileSize;
                   if (footRow >= 0 && footRow < gp.tileM.maxScreenRow && footCol >= 0 && footCol < gp.tileM.maxScreenCol) {
                         if (gp.tileM.getTileType(footCol, footRow) == 3) {
-                              respawn();
+                              die();
                         }
                   }
-                  // Exact pixel check for acid pit falling
-                  if (currentFeetY >= 480) {
+                  // Exact pixel check for acid pit falling (instant death in Stage 1)
+                  if (gp.currentStage == 1 && currentFeetY >= 480) {
                         int footCenterX = hitbox.x + hitbox.width / 2;
                         if ((footCenterX >= 255 && footCenterX <= 365) || (footCenterX >= 660 && footCenterX <= 720)) {
-                              respawn();
+                              die();
                         }
                   }
             }
 
-            if (y > gp.screenHeight + 10) {
-                  respawn();
+            // Boundary and falling hazard check
+            if (gp != null && gp.currentStage == 2) {
+                  // Stage 2 has solid continuous ground across the entire map: prevent falling through below ground
+                  int maxGroundFeetY = 547;
+                  if (y + height > maxGroundFeetY) {
+                        y = maxGroundFeetY - height;
+                        ySpeed = 0;
+                        isJumping = false;
+                  }
+            } else {
+                  // Stage 1 bottom hazard check
+                  if (y > gp.screenHeight + 10) {
+                        die();
+                  }
             }
 
             // 7. Animation frame timing

@@ -42,20 +42,27 @@ public class TileManager {
                   { 1, 1, 3, 3, 3, 3, 3, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1 }
       };
 
-      // Level 2 map layout (alternative stage)
+      // Level 2 map layout (Military Sunset Outpost) aligned with map_sunset.png
       int[][] mapLevel2 = {
+                  // R0 - R5 (y = 0..383): Sky, watchtower tower, mountains
                   { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
                   { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
                   { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
                   { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-                  { 0, 0, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-                  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0 },
                   { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-                  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
                   { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-                  { 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-                  { 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-                  { 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 }
+
+                  // R6 (y = 384..447): Watchtower balcony (c1..2), Pillar 1 (c5..6), Pillar 2 (c10..12), Radar roof (c13..15)
+                  { 0, 2, 2, 0, 0, 2, 2, 0, 0, 0, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0 },
+
+                  // R7 (y = 448..511): Bunker terrace (c12..16)
+                  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0 },
+
+                  // R8 - R11 (y = 512..768): Continuous solid ground across all columns (no acid)
+                  { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+                  { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+                  { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+                  { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 }
       };
 
       public TileManager(GamePanel gp) {
@@ -91,6 +98,8 @@ public class TileManager {
       }
 
       public void loadMap(int level) {
+            currentLevel = level;
+            platforms = (level == 2) ? platformsLevel2 : platformsLevel1;
             int[][] targetMap = (level == 1) ? mapLevel1 : mapLevel2;
 
             // Copy selected level data into active map array [col][row]
@@ -134,8 +143,8 @@ public class TileManager {
             }
       }
 
-      // Exact pixel bounds and standing heights of all platforms in map_sewer_lab.png
-      public final PlatformLedge[] platforms = {
+      // Level 1 platforms: Exact pixel bounds and standing heights in map_sewer_lab.png
+      public static final PlatformLedge[] platformsLevel1 = {
             new PlatformLedge("Left Spawn Ledge", 0, 130, 454, true),
             new PlatformLedge("1. Platform 1", 130, 260, 398, false),
             new PlatformLedge("2. High Turret Platform", 325, 418, 324, false),
@@ -147,6 +156,28 @@ public class TileManager {
             new PlatformLedge("8. Right Sewer Ground", 718, 1080, 478, true),
             new PlatformLedge("8b. Bunker Door Floor", 1080, 1280, 484, true)
       };
+
+      // Level 2 platforms: Exact pixel bounds and standing heights in map_sunset.png
+      // NOTE: map_sunset has a solid continuous ground across the ENTIRE map (x = 0..1280)
+      public static final PlatformLedge[] platformsLevel2 = {
+            // Elevated Floating Platforms (jump-through / drop-through)
+            new PlatformLedge("Watchtower Balcony", 45, 135, 412, false),
+            new PlatformLedge("Pillar 1 Platform", 319, 442, 424, false),
+            new PlatformLedge("Pillar 2 Platform", 620, 785, 446, false),
+            new PlatformLedge("Radar Rooftop", 820, 985, 388, false),
+
+            // Raised Bunker Terrace
+            new PlatformLedge("Bunker Terrace", 785, 1050, 506, true),
+
+            // Continuous ground surfaces across the entire map (no holes, no acid)
+            new PlatformLedge("Watchtower Ground", 0, 380, 547, true),
+            new PlatformLedge("Mid Floor Walkway & Pillar 2 Ground", 380, 785, 544, true),
+            new PlatformLedge("Right Exit Ground", 1050, 1280, 542, true),
+            new PlatformLedge("Continuous Full Ground", 0, 1280, 544, true)
+      };
+
+      // Active platforms for collision
+      public PlatformLedge[] platforms = platformsLevel1;
 
       // Query if an entity's feet can land on any valid platform surface
       public int getLandingSurfaceY(int footLeftX, int footRightX, int currentFeetY, int nextFeetY, boolean allowDropThrough) {
@@ -197,6 +228,28 @@ public class TileManager {
                   return (row + 1) * tileSize;
             }
 
+            // LEVEL 2 (Sunset Military Outpost)
+            if (currentLevel == 2) {
+                  if (row == 6) {
+                        if (col >= 13 && col <= 15) return 388; // Radar Rooftop
+                        if (col >= 1 && col <= 2) return 412;   // Watchtower Balcony
+                        if (col >= 5 && col <= 6) return 424;   // Pillar 1 Platform
+                        if (col >= 10 && col <= 12) return 446; // Pillar 2 Platform
+                        return 424;
+                  }
+                  if (row == 7) {
+                        if (col >= 12 && col <= 16) return 506; // Bunker Terrace
+                        return 506;
+                  }
+                  if (row >= 8) {
+                        if (col <= 5) return 547;
+                        if (col <= 9) return 544;
+                        return 542;
+                  }
+                  return row * tileSize;
+            }
+
+            // LEVEL 1 (Sewer Lab)
             // Row 5: High platforms (Turret col 5, Catwalk cols 6-9, Top catwalk cols 12-14)
             if (row == 5) {
                   if (col == 5) return 324; // Turret platform (col 5)

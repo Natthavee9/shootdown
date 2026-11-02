@@ -1,15 +1,14 @@
 package main;
 
+import background.Background;
+import background.GUI;
+import background.Graphic;
 import entity.Bullet;
 import entity.Enemy;
 import entity.Player;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
-import javax.imageio.ImageIO;
 import javax.swing.*;
 import tile.TileManager;
 
@@ -18,22 +17,22 @@ public class GamePanel extends JPanel implements Runnable {
       // SCREEN SETTINGS
       public int screenWidth = 1280;  // Panel width in pixels (16:9 aspect ratio)
       public int screenHeight = 720;  // Panel height in pixels
-      private BufferedImage bgImage;  // Map background image asset
+
+      // BACKGROUND & GUI SYSTEM (OOP COMPOSITION)
+      public Background background;
+      public int currentStage = 1; // 1 = Sewer Lab, 2 = Sunset Military Outpost
 
       // SYSTEM & CONTROLS
       final int FPS = 60;             // Target frames per second
       public Thread gameThread;       // Game loop thread
       public Keyhandler keyH = new Keyhandler();
+      public boolean gameOver = false; // Game over state flag
 
       // GAME MAP & ENTITIES
       public TileManager tileM;
       public Player player;
       public ArrayList<Enemy> enemies = new ArrayList<>();
       public ArrayList<Bullet> bullets = new ArrayList<>();
-
-      // HUD ASSETS
-      private BufferedImage heartFull;
-      private BufferedImage heartEmpty;
 
       public GamePanel() {
             // Configure panel settings
@@ -42,9 +41,8 @@ public class GamePanel extends JPanel implements Runnable {
             this.setFocusable(true);      // Allow receiving keyboard input
             this.addKeyListener(keyH);    // Register key listener for controls
 
-            // Load map background and HUD images
-            loadBackgroundImage();
-            loadHeartImages();
+            // Initialize Background system (demonstrating OOP Composition: Background HAS-A Graphic and GUI)
+            background = new Background(this);
 
             // Initialize map layout manager for physics and platform collision
             tileM = new TileManager(this);
@@ -56,62 +54,108 @@ public class GamePanel extends JPanel implements Runnable {
             setupEnemies();
       }
 
+      // Load specific stage (1 = Sewer Lab, 2 = Sunset Military Outpost)
+      public void loadStage(int stage) {
+            this.currentStage = stage;
+            this.gameOver = false;
+            bullets.clear();
+
+            // 1. Switch background graphics (via Composition)
+            if (background != null) {
+                  background.loadStage(stage);
+                  if (background.getGui() != null) {
+                        background.getGui().hideRestartButton();
+                  }
+            }
+
+            // 2. Switch platform collision map
+            if (tileM != null) {
+                  tileM.loadMap(stage);
+            }
+
+            // 3. Spawn stage-specific enemies
+            setupEnemies();
+
+            // 4. Respawn player at stage spawn point
+            if (player != null) {
+                  player.respawn();
+            }
+
+            if (keyH != null) {
+                  keyH.resetAll();
+            }
+      }
+
       // Initialize and place enemies on the map
       public void setupEnemies() {
             enemies.clear();
 
-            // 1. Snail crawling on Platform 1 (surface is at y = 398, touching caution floor directly)
-            enemies.add(new Enemy(this, "snail", 160, 360, 130, 230));
+            if (currentStage == 2) {
+                  // === STAGE 2: SUNSET MILITARY OUTPOST ===
+                  // 1. Snake slithering on the Left Watchtower Ground (surface y = 547)
+                  enemies.add(new Enemy(this, "snake_slither", 180, 511, 130, 300));
 
-            // 2. Octopus guarding the Turret Platform (surface is at y = 324)
-            enemies.add(new Enemy(this, "octopus", 350, 274, 320, 400));
+                  // 2. Octopus guarding the Watchtower Balcony (surface y = 412)
+                  enemies.add(new Enemy(this, "octopus", 80, 362, 50, 130));
 
-            // 3. Octopus patrolling the Pipe Catwalk (surface is at y = 374, touching caution walkway directly)
-            enemies.add(new Enemy(this, "octopus", 440, 324, 390, 520));
+                  // 3. Snail crawling on Pillar 1 Platform (surface y = 424)
+                  enemies.add(new Enemy(this, "snail", 360, 386, 325, 435));
 
-            // 4. Skull floating above the toxic acid pit (cols 3-5, y = 210)
-            enemies.add(new Enemy(this, "skull", 220, 210, 180, 310));
+                  // 4. Dragon running on the Mid Floor Walkway (surface y = 544)
+                  enemies.add(new Enemy(this, "dragon", 460, 492, 400, 620));
 
-            // 5. Snake slithering across the Lower Bridge walkway over the acid (surface is at y = 478, touching planks directly)
-            enemies.add(new Enemy(this, "snake_slither", 400, 447, 330, 560));
+                  // 5. Snail crawling on Pillar 2 Platform (surface y = 446)
+                  enemies.add(new Enemy(this, "snail", 680, 408, 630, 775));
 
-            // 6. Octopus patrolling the Top Ladder Catwalk (surface is at y = 320)
-            enemies.add(new Enemy(this, "octopus", 830, 270, 775, 895));
+                  // 6. Octopus patrolling the Radar Rooftop (surface y = 388)
+                  enemies.add(new Enemy(this, "octopus", 880, 338, 830, 975));
 
-            // 7. Snail crawling on the Right Sewer Floor (surface is at y = 478, touching stone floor directly)
-            enemies.add(new Enemy(this, "snail", 760, 440, 730, 880));
+                  // 7. Snake slithering across the Bunker Terrace (surface y = 506)
+                  enemies.add(new Enemy(this, "snake_slither", 850, 470, 795, 1030));
 
-            // 8. Snake slithering on the Right Floor near crates (surface is at y = 478, touching stone floor directly)
-            enemies.add(new Enemy(this, "snake_slither", 950, 447, 900, 1080));
+                  // 8. Beetle flying in the west sky over the outpost
+                  enemies.add(new Enemy(this, "beetle", 320, 220, 220, 450));
 
-            // 9. Skull hovering near the Laboratory Bunker Door (cols 16-18, y = 230)
-            enemies.add(new Enemy(this, "skull", 1120, 230, 1060, 1200));
+                  // 9. Skull floating in the clouds near the radar dish
+                  enemies.add(new Enemy(this, "skull", 720, 240, 620, 900));
+
+                  // 10. Dragon guarding the EXIT bunker door (surface y = 542)
+                  enemies.add(new Enemy(this, "dragon", 1100, 490, 1060, 1180));
+            } else {
+                  // === STAGE 1: SEWER LAB ===
+                  // 1. Snail crawling on Platform 1 (surface is at y = 398)
+                  enemies.add(new Enemy(this, "snail", 160, 360, 130, 230));
+
+                  // 2. Octopus guarding the Turret Platform (surface is at y = 324)
+                  enemies.add(new Enemy(this, "octopus", 350, 274, 320, 400));
+
+                  // 3. Octopus patrolling the Pipe Catwalk (surface is at y = 374)
+                  enemies.add(new Enemy(this, "octopus", 440, 324, 390, 520));
+
+                  // 4. Skull floating above the toxic acid pit (cols 3-5, y = 210)
+                  enemies.add(new Enemy(this, "skull", 220, 210, 180, 310));
+
+                  // 5. Snake slithering across Lower Bridge walkway over acid (surface is at y = 478)
+                  enemies.add(new Enemy(this, "snake_slither", 400, 447, 330, 560));
+
+                  // 6. Octopus patrolling the Top Ladder Catwalk (surface is at y = 320)
+                  enemies.add(new Enemy(this, "octopus", 830, 270, 775, 895));
+
+                  // 7. Snail crawling on the Right Sewer Floor (surface is at y = 478)
+                  enemies.add(new Enemy(this, "snail", 760, 440, 730, 880));
+
+                  // 8. Snake slithering on the Right Floor near crates (surface is at y = 478)
+                  enemies.add(new Enemy(this, "snake_slither", 950, 447, 900, 1080));
+
+                  // 9. Skull hovering near Laboratory Bunker Door (cols 16-18, y = 230)
+                  enemies.add(new Enemy(this, "skull", 1120, 230, 1060, 1200));
+            }
       }
 
-      // Load background map image with multi-path resolution
-      private void loadBackgroundImage() {
-            try {
-                  InputStream stream = getClass().getResourceAsStream("/background/map_sewer_lab.png");
-                  if (stream != null) {
-                        bgImage = ImageIO.read(stream);
-                        return;
-                  }
-
-                  File[] candidates = {
-                        new File("res/background/map_sewer_lab.png"),
-                        new File("shootdown/res/background/map_sewer_lab.png"),
-                        new File("../../res/background/map_sewer_lab.png")
-                  };
-                  for (File f : candidates) {
-                        if (f.exists()) {
-                              bgImage = ImageIO.read(f);
-                              return;
-                        }
-                  }
-                  System.out.println("Warning: Cannot find background image at res/background/map_sewer_lab.png");
-            } catch (IOException e) {
-                  e.printStackTrace();
-            }
+      // Reset all game elements to restart the game
+      public void restartGame() {
+            loadStage(currentStage);
+            this.requestFocusInWindow();
       }
 
       // Start the game loop thread
@@ -150,8 +194,34 @@ public class GamePanel extends JPanel implements Runnable {
 
       // Update game entities and game logic
       public void update() {
+            // Hotkeys for stage switching (Press [ 1 ] for Stage 1, [ 2 ] for Stage 2, [ N ] for Next Stage)
+            if (keyH.stage1Key && currentStage != 1) {
+                  loadStage(1);
+                  return;
+            }
+            if (keyH.stage2Key && currentStage != 2) {
+                  loadStage(2);
+                  return;
+            }
+            if (keyH.nextStageKey) {
+                  keyH.nextStageKey = false;
+                  loadStage(currentStage == 1 ? 2 : 1);
+                  return;
+            }
+
+            // When game is over, pause entity updates (Restart is ONLY triggered by clicking the Restart Button)
+            if (gameOver) {
+                  return;
+            }
+
             if (player != null) {
                   player.update();
+
+                  // Stage progression: reaching the laboratory bunker door on Stage 1 advances to Stage 2!
+                  if (currentStage == 1 && player.x >= 1180) {
+                        loadStage(2);
+                        return;
+                  }
             }
 
             // Update all projectiles (Bullets)
@@ -226,9 +296,9 @@ public class GamePanel extends JPanel implements Runnable {
                                           player.hitbox.x = player.x + 10;
                                           player.hitbox.y = player.y + 8;
 
-                                          // If all hearts lost, respawn player
+                                          // If all hearts lost, player dies and triggers game over
                                           if (player.life <= 0) {
-                                                player.respawn();
+                                                player.die();
                                           }
                                     }
                               }
@@ -242,13 +312,9 @@ public class GamePanel extends JPanel implements Runnable {
       public void paintComponent(Graphics g) {
             super.paintComponent(g);
 
-            // 1. Render map background image
-            if (bgImage != null) {
-                  g.drawImage(bgImage, 0, 0, screenWidth, screenHeight, null);
-            } else {
-                  // Fallback dark background
-                  g.setColor(new Color(25, 25, 30));
-                  g.fillRect(0, 0, screenWidth, screenHeight);
+            // 1. Render map background graphic (via Background -> Graphic Composition)
+            if (background != null) {
+                  background.drawBackground(g);
             }
 
             // 2. Render all enemies on the map
@@ -270,68 +336,14 @@ public class GamePanel extends JPanel implements Runnable {
                   player.draw(g);
             }
 
-            // 5. Render Health HUD (Hearts on the top-left)
-            drawPlayerLife(g);
-      }
-
-      // Draw health hearts on the top-left of the screen
-      private void drawPlayerLife(Graphics g) {
-            if (player == null) return;
-
-            int startX = 20;
-            int startY = 20;
-            int heartSize = 32;
-            int gap = 8;
-
-            for (int i = 0; i < player.maxLife; i++) {
-                  BufferedImage img = (i < player.life) ? heartFull : heartEmpty;
-                  if (img != null) {
-                        g.drawImage(img, startX + i * (heartSize + gap), startY, heartSize, heartSize, null);
-                  } else {
-                        // Fallback shape if heart image not loaded
-                        g.setColor((i < player.life) ? Color.RED : Color.GRAY);
-                        g.fillRoundRect(startX + i * (heartSize + gap), startY, heartSize, heartSize, 6, 6);
-                  }
+            // 5. Render GUI overlay (Hearts HUD & Game Over screen via Background -> GUI Composition)
+            if (background != null) {
+                  background.drawGUI(g);
             }
       }
 
-      // Load health heart sprites
-      private void loadHeartImages() {
-            try {
-                  BufferedImage fullRaw = loadImage("res/heart/heart_full.png");
-                  BufferedImage emptyRaw = loadImage("res/heart/heart_empty.png");
-
-                  // Crop the actual heart graphic (13x13) to eliminate empty transparent margins
-                  if (fullRaw != null && fullRaw.getWidth() >= 22 && fullRaw.getHeight() >= 20) {
-                        heartFull = fullRaw.getSubimage(9, 7, 13, 13);
-                  } else {
-                        heartFull = fullRaw;
-                  }
-
-                  if (emptyRaw != null && emptyRaw.getWidth() >= 22 && emptyRaw.getHeight() >= 20) {
-                        heartEmpty = emptyRaw.getSubimage(9, 7, 13, 13);
-                  } else {
-                        heartEmpty = emptyRaw;
-                  }
-            } catch (Exception e) {
-                  System.out.println("Warning: Cannot load heart images");
-            }
-      }
-
-      private BufferedImage loadImage(String path) {
-            try {
-                  InputStream stream = getClass().getResourceAsStream("/" + path.replaceFirst("^res/", ""));
-                  if (stream != null) return ImageIO.read(stream);
-
-                  File[] candidates = {
-                        new File(path),
-                        new File("shootdown/" + path),
-                        new File("../../" + path)
-                  };
-                  for (File f : candidates) {
-                        if (f.exists()) return ImageIO.read(f);
-                  }
-            } catch (Exception e) {}
-            return null;
+      // Getter for background image asset (delegated to Graphic)
+      public BufferedImage getBgImage() {
+            return (background != null && background.getGraphic() != null) ? background.getGraphic().getBgImage() : null;
       }
 }

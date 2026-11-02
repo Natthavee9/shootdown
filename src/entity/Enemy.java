@@ -62,6 +62,21 @@ public class Enemy extends GameOBJ {
                   height = 36;
                   speed = 2;
                   isFlying = false;
+            } else if ("beetle".equalsIgnoreCase(type) || "beetle_fly".equalsIgnoreCase(type)) {
+                  width = 50;
+                  height = 44;
+                  speed = 2;
+                  isFlying = true;
+            } else if ("dragon".equalsIgnoreCase(type) || "dragon_run".equalsIgnoreCase(type)) {
+                  width = 64;
+                  height = 52;
+                  speed = 2;
+                  isFlying = false;
+            } else if ("eyeball".equalsIgnoreCase(type) || "eyeball_walk".equalsIgnoreCase(type)) {
+                  width = 48;
+                  height = 48;
+                  speed = 1;
+                  isFlying = false;
             } else {
                   width = 48;
                   height = 48;
@@ -95,6 +110,12 @@ public class Enemy extends GameOBJ {
                   prefix = "skull_float_";
             } else if (isSnake()) {
                   prefix = "snake_slither_";
+            } else if ("beetle".equalsIgnoreCase(type) || "beetle_fly".equalsIgnoreCase(type)) {
+                  prefix = "beetle_fly_";
+            } else if ("dragon".equalsIgnoreCase(type) || "dragon_run".equalsIgnoreCase(type)) {
+                  prefix = "dragon_run_";
+            } else if ("eyeball".equalsIgnoreCase(type) || "eyeball_walk".equalsIgnoreCase(type)) {
+                  prefix = "eyeball_walk_";
             }
 
             for (int i = 0; i < 2; i++) {
