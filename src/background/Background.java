@@ -8,6 +8,7 @@ import main.GamePanel;
  * Demonstrates OOP Composition:
  * - Background HAS-A Graphic (environment/map rendering)
  * - Background HAS-A GUI (HUD hearts & Game Over screen overlay)
+ * - Background HAS-A StartScreen (Title screen with black background & start button)
  */
 public class Background {
 
@@ -19,11 +20,24 @@ public class Background {
     // OOP COMPOSITION: Background HAS-A GUI
     private GUI gui;
 
+    // OOP COMPOSITION: Background HAS-A StartScreen
+    private StartScreen startScreen;
+
     public Background(GamePanel gp) {
         this.gp = gp;
         // Instantiating composed objects (Composition lifecycle management)
         this.gui = new GUI(gp);
         this.graphic = new Graphic(gp, this.gui);
+        this.startScreen = new StartScreen(gp);
+    }
+
+    /**
+     * Render the Start Screen (Title & Start Game Button with black background)
+     */
+    public void drawStartScreen(Graphics g) {
+        if (startScreen != null) {
+            startScreen.draw(g);
+        }
     }
 
     /**
@@ -73,6 +87,22 @@ public class Background {
 
     public javax.swing.JButton getRestartButton() {
         return (gui != null) ? gui.getRestartButton() : null;
+    }
+
+    public javax.swing.JButton getNextStageButton() {
+        return (gui != null) ? gui.getNextStageButton() : null;
+    }
+
+    public StartScreen getStartScreen() {
+        return startScreen;
+    }
+
+    public void setStartScreen(StartScreen startScreen) {
+        this.startScreen = startScreen;
+    }
+
+    public javax.swing.JButton getStartButton() {
+        return (startScreen != null) ? startScreen.getStartButton() : null;
     }
 }
 

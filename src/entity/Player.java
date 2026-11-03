@@ -7,6 +7,7 @@ import java.io.InputStream;
 import javax.imageio.ImageIO;
 import main.GamePanel;
 import main.Keyhandler;
+import tile.TileManager.PlatformLedge;
 
 // Represents the controllable player character, scaled and aligned to the map grid
 public class Player extends GameOBJ {
@@ -25,7 +26,7 @@ public class Player extends GameOBJ {
       public boolean isJumping = false;
       public int ySpeed = 0;              // Vertical velocity for jumping & gravity
       public final int gravity = 1;       // Gravity acceleration
-      public final int jumpStrength = -15;// Upward impulse (allows clearing pillars and platforms comfortably)
+      public final int jumpStrength = -18;// Upward impulse (higher jump for effortless platform clearing)
       public final int maxFallSpeed = 12; // Terminal fall velocity
 
       // Cooldown timer to allow dropping through floating platforms (Tile 2)
@@ -34,11 +35,15 @@ public class Player extends GameOBJ {
       // Shooting cooldown timer
       public int shotCooldown = 0;
 
-      // Health and invincibility states
-      public int maxLife = 3;
-      public int life = 3;
+      // Health and invincibility states (3 heart containers = 6 half-hearts, decreases by half a heart per hit)
+      public int maxLife = 6;
+      public int life = 6;
       public boolean invincible = false;
       public int invincibleCounter = 0;
+
+      // Platform and ground tracking states ("เดินตามพื้น")
+      public boolean onSolidGround = true;
+      public PlatformLedge currentPlatform = null;
 
       // Animation frame counters
       public int spriteCounter = 0;
@@ -57,7 +62,7 @@ public class Player extends GameOBJ {
             // Player proportions matching doors, barrels, crates, and railings (54 x 76)
             width = 54;
             height = 76;
-            speed = 4;
+            speed = 3; // Reduced movement speed for more controlled, precise platforming
 
             // Spawn player standing flush on the starting ledge
             int spawnSurfaceY = (gp != null && gp.currentStage == 2) ? 547 : 454;
@@ -72,7 +77,7 @@ public class Player extends GameOBJ {
             invincibleCounter = 0;
       }
 
-      // Player dies immediately when falling off map or into acid
+      // Player dies when all hearts are depleted
       public void die() {
             life = 0;
             if (gp != null) {
@@ -80,8 +85,18 @@ public class Player extends GameOBJ {
             }
       }
 
-      // Respawn player on the starting ledge after restarting game
-      public void respawn() {
+      // Handle falling off map / acid pit: loses half a heart (1 HP unit) and returns to spawn; game over only when life runs out
+      public void fallHazard() {
+            life--;
+            if (life <= 0) {
+                  die();
+            } else {
+                  respawnKeepLife();
+            }
+      }
+
+      // Reset player position back to starting ledge while keeping remaining hearts
+      public void respawnKeepLife() {
             int spawnSurfaceY = (gp != null && gp.currentStage == 2) ? 547 : 454;
             x = (gp != null && gp.currentStage == 2) ? 60 : 40;
             y = spawnSurfaceY - height;
@@ -89,14 +104,23 @@ public class Player extends GameOBJ {
             isJumping = false;
             dropThroughCooldown = 0;
             shotCooldown = 0;
-            life = maxLife;
-            invincible = false;
+            invincible = true;
             invincibleCounter = 0;
             direction = "right";
+            onSolidGround = true;
+            currentPlatform = null;
             if (hitbox != null) {
                   hitbox.x = x + 10;
                   hitbox.y = y + 8;
             }
+      }
+
+      // Respawn player and restore full health after restarting game
+      public void respawn() {
+            respawnKeepLife();
+            life = maxLife;
+            invincible = false;
+            invincibleCounter = 0;
       }
 
       // Load player sprites from resources with multi-path resolution
@@ -221,6 +245,50 @@ public class Player extends GameOBJ {
 
             hitbox.x = x + 10;
 
+            // Check if player walked off a floating platform ledge
+            if (!isJumping && !onSolidGround && currentPlatform != null) {
+                  int footCenterX = hitbox.x + hitbox.width / 2;
+                  if (footCenterX < currentPlatform.minX || footCenterX > currentPlatform.maxX) {
+                        isJumping = true;
+                        ySpeed = 0;
+                        currentPlatform = null;
+                  }
+            }
+
+            // Follow continuous ground contour while walking on the floor ("เดินตามพื้น")
+            if (!isJumping && onSolidGround && gp.tileM != null) {
+                  int footCenterX = hitbox.x + hitbox.width / 2;
+                  int targetGroundY;
+                  if (dx > 0) {
+                        // Stepping right: check front edge for higher ground ledge (e.g. Bunker Terrace)
+                        int frontX = hitbox.x + hitbox.width;
+                        int frontGround = gp.tileM.getGroundSurfaceY(frontX);
+                        int centerGround = gp.tileM.getGroundSurfaceY(footCenterX);
+                        targetGroundY = (frontGround != -1 && centerGround != -1) ? Math.min(frontGround, centerGround) : centerGround;
+                  } else if (dx < 0) {
+                        // Stepping left: check left edge for higher ground ledge
+                        int frontX = hitbox.x;
+                        int frontGround = gp.tileM.getGroundSurfaceY(frontX);
+                        int centerGround = gp.tileM.getGroundSurfaceY(footCenterX);
+                        targetGroundY = (frontGround != -1 && centerGround != -1) ? Math.min(frontGround, centerGround) : centerGround;
+                  } else {
+                        targetGroundY = gp.tileM.getGroundSurfaceY(footCenterX);
+                  }
+
+                  if (targetGroundY != -1) {
+                        int currentFeetY = y + height;
+                        if (currentFeetY > targetGroundY) {
+                              // Smooth step UP onto elevated ground
+                              int step = Math.min(8, currentFeetY - targetGroundY);
+                              y -= step;
+                        } else if (currentFeetY < targetGroundY) {
+                              // Smooth step DOWN onto lower ground
+                              int step = Math.min(8, targetGroundY - currentFeetY);
+                              y += step;
+                        }
+                  }
+            }
+
             // 2. Drop through floating platform (Tile 2) when pressing Down (S key)
             if (keyH.downPress && !isJumping && gp.tileM != null) {
                   int currentFeetY = y + height;
@@ -231,6 +299,8 @@ public class Player extends GameOBJ {
                         ySpeed = 3;
                         isJumping = true;
                         dropThroughCooldown = 8;
+                        onSolidGround = false;
+                        currentPlatform = null;
                   }
             }
 
@@ -238,6 +308,8 @@ public class Player extends GameOBJ {
             if (keyH.upPress && !isJumping) {
                   ySpeed = jumpStrength;
                   isJumping = true;
+                  onSolidGround = false;
+                  currentPlatform = null;
             }
 
             // 4. Shoot bullet fireball from gun barrel (Spacebar)
@@ -281,11 +353,13 @@ public class Player extends GameOBJ {
                         int footRightX = hitbox.x + hitbox.width - 4;
                         boolean allowDropThrough = (dropThroughCooldown <= 0);
 
-                        int landingSurface = gp.tileM.getLandingSurfaceY(footLeftX, footRightX, currentFeetY, nextFeetY, allowDropThrough);
-                        if (landingSurface != -1) {
-                              y = landingSurface - height;
+                        PlatformLedge landingPlat = gp.tileM.getLandingPlatform(footLeftX, footRightX, currentFeetY, nextFeetY, allowDropThrough);
+                        if (landingPlat != null) {
+                              y = landingPlat.surfaceY - height;
                               ySpeed = 0;
                               isJumping = false;
+                              currentPlatform = landingPlat;
+                              onSolidGround = landingPlat.isSolidGround;
                         } else {
                               y += ySpeed;
                               isJumping = true;
@@ -328,31 +402,39 @@ public class Player extends GameOBJ {
                   int footCol = (hitbox.x + hitbox.width / 2) / gp.tileM.tileSize;
                   if (footRow >= 0 && footRow < gp.tileM.maxScreenRow && footCol >= 0 && footCol < gp.tileM.maxScreenCol) {
                         if (gp.tileM.getTileType(footCol, footRow) == 3) {
-                              die();
+                              fallHazard();
+                              return;
                         }
                   }
-                  // Exact pixel check for acid pit falling (instant death in Stage 1)
+                  // Exact pixel check for acid pit falling in Stage 1 (loses 1 heart and respawns)
                   if (gp.currentStage == 1 && currentFeetY >= 480) {
                         int footCenterX = hitbox.x + hitbox.width / 2;
                         if ((footCenterX >= 255 && footCenterX <= 365) || (footCenterX >= 660 && footCenterX <= 720)) {
-                              die();
+                              fallHazard();
+                              return;
                         }
                   }
             }
 
             // Boundary and falling hazard check
             if (gp != null && gp.currentStage == 2) {
-                  // Stage 2 has solid continuous ground across the entire map: prevent falling through below ground
-                  int maxGroundFeetY = 547;
-                  if (y + height > maxGroundFeetY) {
-                        y = maxGroundFeetY - height;
+                  // Stage 2 has solid continuous ground across the entire map ("เดินตามพื้น"):
+                  // prevent falling below the local ground contour (Watchtower 547, Mid Floor 544, Bunker Terrace 506, Exit 542)
+                  int footCenterX = hitbox.x + hitbox.width / 2;
+                  int groundY = (gp.tileM != null) ? gp.tileM.getGroundSurfaceY(footCenterX) : 547;
+                  if (groundY == -1) groundY = 547;
+                  if (y + height > groundY) {
+                        y = groundY - height;
                         ySpeed = 0;
                         isJumping = false;
+                        onSolidGround = true;
+                        currentPlatform = null;
                   }
             } else {
-                  // Stage 1 bottom hazard check
+                  // Stage 1 bottom hazard check (loses 1 heart and respawns)
                   if (y > gp.screenHeight + 10) {
-                        die();
+                        fallHazard();
+                        return;
                   }
             }
 
@@ -376,7 +458,7 @@ public class Player extends GameOBJ {
 
             // Select sprite based on state
             if (isJumping) {
-                  int jumpIndex = Math.min(Math.max((ySpeed + 14) / 6, 0), 4);
+                  int jumpIndex = Math.min(Math.max((ySpeed - jumpStrength) / 7, 0), 4);
                   image = jumpSprites[jumpIndex];
                   if (image == null) image = jumpSprites[0];
             } else if (isMoving) {

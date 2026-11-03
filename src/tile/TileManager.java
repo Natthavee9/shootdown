@@ -158,7 +158,7 @@ public class TileManager {
       };
 
       // Level 2 platforms: Exact pixel bounds and standing heights in map_sunset.png
-      // NOTE: map_sunset has a solid continuous ground across the ENTIRE map (x = 0..1280)
+      // NOTE: map_sunset has a continuous solid ground across the entire map, stepping up to Bunker Terrace
       public static final PlatformLedge[] platformsLevel2 = {
             // Elevated Floating Platforms (jump-through / drop-through)
             new PlatformLedge("Watchtower Balcony", 45, 135, 412, false),
@@ -166,22 +166,21 @@ public class TileManager {
             new PlatformLedge("Pillar 2 Platform", 620, 785, 446, false),
             new PlatformLedge("Radar Rooftop", 820, 985, 388, false),
 
-            // Raised Bunker Terrace
-            new PlatformLedge("Bunker Terrace", 785, 1050, 506, true),
+            // Raised Bunker Terrace (solid ground elevated to surface Y = 506)
+            new PlatformLedge("Bunker Terrace", 770, 1050, 506, true),
 
             // Continuous ground surfaces across the entire map (no holes, no acid)
             new PlatformLedge("Watchtower Ground", 0, 380, 547, true),
-            new PlatformLedge("Mid Floor Walkway & Pillar 2 Ground", 380, 785, 544, true),
-            new PlatformLedge("Right Exit Ground", 1050, 1280, 542, true),
-            new PlatformLedge("Continuous Full Ground", 0, 1280, 544, true)
+            new PlatformLedge("Mid Floor Walkway & Pillar 2 Ground", 380, 780, 544, true),
+            new PlatformLedge("Right Exit Ground", 1050, 1280, 542, true)
       };
 
       // Active platforms for collision
       public PlatformLedge[] platforms = platformsLevel1;
 
-      // Query if an entity's feet can land on any valid platform surface
-      public int getLandingSurfaceY(int footLeftX, int footRightX, int currentFeetY, int nextFeetY, boolean allowDropThrough) {
-            int bestSurfaceY = -1;
+      // Query the specific PlatformLedge that entity feet land on
+      public PlatformLedge getLandingPlatform(int footLeftX, int footRightX, int currentFeetY, int nextFeetY, boolean allowDropThrough) {
+            PlatformLedge bestPlatform = null;
             int minDiff = Integer.MAX_VALUE;
             int footCenterX = (footLeftX + footRightX) / 2;
 
@@ -197,12 +196,42 @@ public class TileManager {
                               int diff = Math.abs(currentFeetY - p.surfaceY);
                               if (diff < minDiff) {
                                     minDiff = diff;
-                                    bestSurfaceY = p.surfaceY;
+                                    bestPlatform = p;
                               }
                         }
                   }
             }
-            return bestSurfaceY;
+            return bestPlatform;
+      }
+
+      // Query if an entity's feet can land on any valid platform surface
+      public int getLandingSurfaceY(int footLeftX, int footRightX, int currentFeetY, int nextFeetY, boolean allowDropThrough) {
+            PlatformLedge p = getLandingPlatform(footLeftX, footRightX, currentFeetY, nextFeetY, allowDropThrough);
+            return (p != null) ? p.surfaceY : -1;
+      }
+
+      // Returns exact ground surface Y for walking along continuous ground ("เดินตามพื้น")
+      public int getGroundSurfaceY(int footCenterX) {
+            if (currentLevel == 2) {
+                  if (footCenterX < 380) {
+                        return 547;
+                  } else if (footCenterX < 780) {
+                        return 544;
+                  } else if (footCenterX <= 1050) {
+                        return 506; // Raised Bunker Terrace
+                  } else {
+                        return 542; // Right Exit Ground
+                  }
+            } else {
+                  if (footCenterX <= 130) {
+                        return 454;
+                  } else if (footCenterX >= 718 && footCenterX < 1080) {
+                        return 478;
+                  } else if (footCenterX >= 1080) {
+                        return 484;
+                  }
+                  return -1; // Acid pit / gap in Stage 1
+            }
       }
 
       // Query if the platform beneath entity feet allows drop-through (Down / S key)

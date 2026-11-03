@@ -15,17 +15,12 @@ import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import main.GamePanel;
 
-/**
- * GUI class handles all graphical user interface rendering,
- * including player health hearts (HUD), Game Over dialog,
- * and the Restart Button.
- * 
- * Uses standard java.awt.Graphics (NO Graphics2D).
- */
+
 public class GUI {
 
     private GamePanel gp;
     private BufferedImage heartFull;
+    private BufferedImage heartHalf;
     private BufferedImage heartEmpty;
 
     // Swing GUI Restart Button
@@ -35,10 +30,50 @@ public class GUI {
     private int btnW = 240;
     private int btnH = 46;
 
+    // Swing GUI Next Stage Button (Appears when all enemies in Stage 1 are defeated)
+    private JButton nextStageButton;
+    private int nextBtnX;
+    private int nextBtnY;
+    private int nextBtnW = 280;
+    private int nextBtnH = 50;
+
     public GUI(GamePanel gp) {
         this.gp = gp;
         loadHeartImages();
         initRestartButton();
+        initNextStageButton();
+    }
+
+    /**
+     * Initialize Swing JButton for transitioning to Stage 2 upon defeating all enemies in Stage 1
+     */
+    private void initNextStageButton() {
+        if (gp == null) return;
+
+        nextBtnW = 280;
+        nextBtnH = 50;
+        nextBtnX = (gp.screenWidth - nextBtnW) / 2;
+        nextBtnY = (gp.screenHeight - 220) / 2 + 115;
+
+        nextStageButton = new JButton("GO TO STAGE 2  ►");
+        nextStageButton.setFont(new Font("SansSerif", Font.BOLD, 18));
+        nextStageButton.setForeground(Color.WHITE);
+        nextStageButton.setBackground(new Color(220, 100, 15)); // Sunset amber/orange
+        nextStageButton.setFocusPainted(false);
+        nextStageButton.setFocusable(false); // Prevent stealing keyboard controls
+        nextStageButton.setBorder(BorderFactory.createLineBorder(new Color(255, 215, 0), 2)); // Gold border
+        nextStageButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        nextStageButton.setBounds(nextBtnX, nextBtnY, nextBtnW, nextBtnH);
+        nextStageButton.setVisible(false);
+
+        // Click event listener
+        nextStageButton.addActionListener(e -> {
+            goToStage2();
+        });
+
+        // Add to GamePanel
+        gp.setLayout(null);
+        gp.add(nextStageButton);
     }
 
     /**
@@ -76,11 +111,17 @@ public class GUI {
         gp.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
-                if (gp != null && gp.gameOver) {
+                if (gp != null && (gp.gameOver || gp.gameWon)) {
                     int mx = e.getX();
                     int my = e.getY();
                     if (mx >= btnX && mx <= btnX + btnW && my >= btnY && my <= btnY + btnH) {
                         restartGame();
+                    }
+                } else if (gp != null && isStage1Cleared()) {
+                    int mx = e.getX();
+                    int my = e.getY();
+                    if (mx >= nextBtnX && mx <= nextBtnX + nextBtnW && my >= nextBtnY && my <= nextBtnY + nextBtnH) {
+                        goToStage2();
                     }
                 }
             }
@@ -88,10 +129,46 @@ public class GUI {
     }
 
     /**
+     * Trigger transition to Stage 2 upon clicking button
+     */
+    public void goToStage2() {
+        hideNextStageButton();
+        if (gp != null) {
+            gp.loadStage(2);
+            gp.requestFocusInWindow();
+        }
+    }
+
+    /**
+     * Check if Stage 1 is cleared
+     */
+    public boolean isStage1Cleared() {
+        return gp != null && gp.isStage1Cleared();
+    }
+
+    public void showNextStageButton() {
+        if (nextStageButton != null && !nextStageButton.isVisible()) {
+            nextStageButton.setVisible(true);
+            nextStageButton.repaint();
+        }
+    }
+
+    public void hideNextStageButton() {
+        if (nextStageButton != null && nextStageButton.isVisible()) {
+            nextStageButton.setVisible(false);
+        }
+    }
+
+    public JButton getNextStageButton() {
+        return nextStageButton;
+    }
+
+    /**
      * Trigger game restart and return keyboard focus to GamePanel
      */
     private void restartGame() {
         hideRestartButton();
+        hideNextStageButton();
         if (gp != null) {
             gp.restartGame();
             gp.requestFocusInWindow();
@@ -112,16 +189,32 @@ public class GUI {
     }
 
     /**
-     * Draw all GUI components: HUD (hearts), stage indicator, and overlays (Game Over dialog)
+     * Draw all GUI components: HUD (hearts), stage indicator, and overlays (Game Over & Stage Clear dialogs)
      */
     public void draw(Graphics g) {
+        if (gp == null || !gp.gameStarted) {
+            hideRestartButton();
+            hideNextStageButton();
+            return;
+        }
+
         drawPlayerLife(g);
         drawStageBadge(g);
 
-        if (gp != null && gp.gameOver) {
+        if (gp.gameWon) {
+            drawVictoryScreen(g);
+            hideNextStageButton();
+        } else if (gp.gameOver) {
             drawGameOverScreen(g);
+            hideNextStageButton();
         } else {
             hideRestartButton();
+            if (isStage1Cleared()) {
+                drawStage1ClearedScreen(g);
+                showNextStageButton();
+            } else {
+                hideNextStageButton();
+            }
         }
     }
 
@@ -131,7 +224,13 @@ public class GUI {
     public void drawStageBadge(Graphics g) {
         if (gp == null) return;
 
-        String stageText = (gp.currentStage == 2) ? "STAGE 2 : SUNSET OUTPOST" : "STAGE 1 : SEWER LAB";
+        String stageText;
+        if (gp.currentStage == 2) {
+            stageText = gp.gameWon ? "STAGE 2 CLEAR" : "STAGE 2 : SUNSET OUTPOST";
+        } else {
+            stageText = isStage1Cleared() ? "STAGE 1 CLEAR" : "STAGE 1 : SEWER LAB";
+        }
+
         Font font = new Font("SansSerif", Font.BOLD, 14);
         g.setFont(font);
         FontMetrics fm = g.getFontMetrics();
@@ -163,27 +262,188 @@ public class GUI {
         int startY = 20;
         int heartSize = 32;
         int gap = 8;
+        // Each heart container represents 2 half-hearts (e.g. 6 HP = 3 heart containers)
+        int heartContainers = gp.player.maxLife / 2;
 
-        for (int i = 0; i < gp.player.maxLife; i++) {
-            BufferedImage img = (i < gp.player.life) ? heartFull : heartEmpty;
+        for (int i = 0; i < heartContainers; i++) {
+            BufferedImage img;
+            if (gp.player.life >= (i + 1) * 2) {
+                img = heartFull;
+            } else if (gp.player.life == (i * 2) + 1) {
+                img = heartHalf;
+            } else {
+                img = heartEmpty;
+            }
+
+            int hx = startX + i * (heartSize + gap);
             if (img != null) {
-                g.drawImage(img, startX + i * (heartSize + gap), startY, heartSize, heartSize, null);
+                g.drawImage(img, hx, startY, heartSize, heartSize, null);
             } else {
                 // Fallback shape if heart image not loaded
-                g.setColor((i < gp.player.life) ? Color.RED : Color.GRAY);
-                g.fillRoundRect(startX + i * (heartSize + gap), startY, heartSize, heartSize, 6, 6);
+                if (gp.player.life >= (i + 1) * 2) {
+                    g.setColor(Color.RED);
+                    g.fillRoundRect(hx, startY, heartSize, heartSize, 6, 6);
+                } else if (gp.player.life == (i * 2) + 1) {
+                    g.setColor(Color.RED);
+                    g.fillRoundRect(hx, startY, heartSize / 2, heartSize, 6, 6);
+                    g.setColor(Color.GRAY);
+                    g.fillRoundRect(hx + heartSize / 2, startY, heartSize / 2, heartSize, 6, 6);
+                } else {
+                    g.setColor(Color.GRAY);
+                    g.fillRoundRect(hx, startY, heartSize, heartSize, 6, 6);
+                }
             }
         }
     }
 
     /**
-     * Draw Game Over dialog box and restart prompt.
-     * Uses standard java.awt.Graphics (NO Graphics2D).
+     * Render Stage 1 Cleared victory dialog with the Go to Stage 2 Button
      */
-    public void drawGameOverScreen(Graphics g) {
+    public void drawStage1ClearedScreen(Graphics g) {
         if (gp == null) return;
 
         // Show the Swing JButton
+        showNextStageButton();
+
+        // Translucent dark background overlay
+        g.setColor(new Color(0, 0, 0, 180));
+        g.fillRect(0, 0, gp.screenWidth, gp.screenHeight);
+
+        // Center dialog panel dimensions
+        int boxW = 560;
+        int boxH = 240;
+        int boxX = (gp.screenWidth - boxW) / 2;
+        int boxY = (gp.screenHeight - boxH) / 2;
+
+        // Dialog background box
+        g.setColor(new Color(18, 24, 32, 245));
+        g.fillRoundRect(boxX, boxY, boxW, boxH, 20, 20);
+
+        // Gold border
+        g.setColor(new Color(255, 215, 0));
+        g.drawRoundRect(boxX, boxY, boxW, boxH, 20, 20);
+        g.drawRoundRect(boxX + 1, boxY + 1, boxW - 2, boxH - 2, 18, 18);
+
+        // Title: Stage 1 clear
+        Font titleFont = new Font("SansSerif", Font.BOLD, 42);
+        g.setFont(titleFont);
+        FontMetrics fmTitle = g.getFontMetrics();
+        String title = "Stage 1 clear";
+        int titleX = boxX + (boxW - fmTitle.stringWidth(title)) / 2;
+        int titleY = boxY + 68;
+
+        // Shadow & Title text
+        g.setColor(new Color(10, 40, 20));
+        g.drawString(title, titleX + 2, titleY + 2);
+        g.setColor(new Color(60, 240, 140)); // Vibrant emerald green
+        g.drawString(title, titleX, titleY);
+
+        // Button dimensions and placement
+        nextBtnX = boxX + (boxW - nextBtnW) / 2;
+        nextBtnY = boxY + 122;
+        if (nextStageButton != null) {
+            nextStageButton.setBounds(nextBtnX, nextBtnY, nextBtnW, nextBtnH);
+        }
+
+        // Draw visual button (displays underneath JButton and in offscreen screen captures)
+        g.setColor(new Color(220, 100, 15)); // Sunset amber/orange
+        g.fillRoundRect(nextBtnX, nextBtnY, nextBtnW, nextBtnH, 12, 12);
+        g.setColor(new Color(255, 215, 0)); // Gold border
+        g.drawRoundRect(nextBtnX, nextBtnY, nextBtnW, nextBtnH, 12, 12);
+        g.drawRoundRect(nextBtnX + 1, nextBtnY + 1, nextBtnW - 2, nextBtnH - 2, 10, 10);
+
+        Font btnFont = new Font("SansSerif", Font.BOLD, 18);
+        g.setFont(btnFont);
+        FontMetrics fmBtn = g.getFontMetrics();
+        String btnText = "GO TO STAGE 2  ►";
+        int btnTextX = nextBtnX + (nextBtnW - fmBtn.stringWidth(btnText)) / 2;
+        int btnTextY = nextBtnY + ((nextBtnH - fmBtn.getHeight()) / 2) + fmBtn.getAscent();
+        g.setColor(Color.WHITE);
+        g.drawString(btnText, btnTextX, btnTextY);
+
+       
+    }
+
+    public void drawVictoryScreen(Graphics g) {
+        if (gp == null) return;
+
+        // Configure and show the Swing JButton for playing again
+        if (restartButton != null) {
+            restartButton.setText("PLAY AGAIN  ►");
+            restartButton.setBackground(new Color(34, 160, 64));
+        }
+        showRestartButton();
+
+        // Translucent dark background overlay
+        g.setColor(new Color(0, 0, 0, 190));
+        g.fillRect(0, 0, gp.screenWidth, gp.screenHeight);
+
+        // Center dialog panel dimensions
+        int boxW = 580;
+        int boxH = 260;
+        int boxX = (gp.screenWidth - boxW) / 2;
+        int boxY = (gp.screenHeight - boxH) / 2;
+
+        // Dialog background box
+        g.setColor(new Color(16, 26, 20, 245));
+        g.fillRoundRect(boxX, boxY, boxW, boxH, 20, 20);
+
+        // Gold border (drawn with standard Graphics)
+        g.setColor(new Color(255, 215, 0));
+        g.drawRoundRect(boxX, boxY, boxW, boxH, 20, 20);
+        g.drawRoundRect(boxX + 1, boxY + 1, boxW - 2, boxH - 2, 18, 18);
+
+        // Title: YOU WIN
+        Font titleFont = new Font("SansSerif", Font.BOLD, 48);
+        g.setFont(titleFont);
+        FontMetrics fmTitle = g.getFontMetrics();
+        String title = "YOU WIN";
+        int titleX = boxX + (boxW - fmTitle.stringWidth(title)) / 2;
+        int titleY = boxY + 65;
+
+        // Shadow & Title text (radiant gold)
+        g.setColor(new Color(10, 40, 15));
+        g.drawString(title, titleX + 2, titleY + 2);
+        g.setColor(new Color(255, 215, 0)); // Pure gold
+        g.drawString(title, titleX, titleY);
+
+        
+
+        // Button dimensions and placement
+        btnX = boxX + (boxW - btnW) / 2;
+        btnY = boxY + 132;
+        if (restartButton != null) {
+            restartButton.setBounds(btnX, btnY, btnW, btnH);
+        }
+
+        // Draw visual button (displays underneath JButton and in offscreen screen captures)
+        g.setColor(new Color(34, 160, 64)); // Emerald green
+        g.fillRoundRect(btnX, btnY, btnW, btnH, 12, 12);
+        g.setColor(new Color(255, 215, 0)); // Gold border
+        g.drawRoundRect(btnX, btnY, btnW, btnH, 12, 12);
+        g.drawRoundRect(btnX + 1, btnY + 1, btnW - 2, btnH - 2, 10, 10);
+
+        Font btnFont = new Font("SansSerif", Font.BOLD, 18);
+        g.setFont(btnFont);
+        FontMetrics fmBtn = g.getFontMetrics();
+        String btnText = "PLAY AGAIN";
+        int btnTextX = btnX + (btnW - fmBtn.stringWidth(btnText)) / 2;
+        int btnTextY = btnY + ((btnH - fmBtn.getHeight()) / 2) + fmBtn.getAscent();
+        g.setColor(Color.WHITE);
+        g.drawString(btnText, btnTextX, btnTextY);
+
+        
+    }
+
+    
+    public void drawGameOverScreen(Graphics g) {
+        if (gp == null) return;
+
+        // Configure and show the Swing JButton for restarting
+        if (restartButton != null) {
+            restartButton.setText("RESTART GAME");
+            restartButton.setBackground(new Color(200, 40, 40));
+        }
         showRestartButton();
 
         // Translucent dark background overlay
@@ -205,11 +465,11 @@ public class GUI {
         g.drawRoundRect(boxX, boxY, boxW, boxH, 20, 20);
         g.drawRoundRect(boxX + 1, boxY + 1, boxW - 2, boxH - 2, 18, 18);
 
-        // Title: GAME OVER
+        // Title: YOU LOSE (in Stage 2) or GAME OVER
         Font titleFont = new Font("SansSerif", Font.BOLD, 46);
         g.setFont(titleFont);
         FontMetrics fmTitle = g.getFontMetrics();
-        String title = "GAME OVER";
+        String title = (gp.currentStage == 2) ? "YOU LOSE" : "GAME OVER";
         int titleX = boxX + (boxW - fmTitle.stringWidth(title)) / 2;
         int titleY = boxY + 65;
 
@@ -219,14 +479,7 @@ public class GUI {
         g.setColor(new Color(255, 60, 60));
         g.drawString(title, titleX, titleY);
 
-        // Reason / Subtitle
-        Font subFont = new Font("SansSerif", Font.PLAIN, 18);
-        g.setFont(subFont);
-        FontMetrics fmSub = g.getFontMetrics();
-        String sub = (gp.currentStage == 2) ? "MISSION FAILED IN SUNSET OUTPOST!" : "YOU FELL INTO TOXIC ACID!";
-        int subX = boxX + (boxW - fmSub.stringWidth(sub)) / 2;
-        g.setColor(new Color(210, 210, 210));
-        g.drawString(sub, subX, boxY + 108);
+        
 
         // Button dimensions and placement
         btnX = boxX + (boxW - btnW) / 2;
@@ -251,14 +504,7 @@ public class GUI {
         g.setColor(Color.WHITE);
         g.drawString(btnText, btnTextX, btnTextY);
 
-        // Secondary prompt: Button-only restart instruction
-        Font promptFont = new Font("SansSerif", Font.PLAIN, 14);
-        g.setFont(promptFont);
-        FontMetrics fmPrompt = g.getFontMetrics();
-        String prompt = "CLICK BUTTON ABOVE TO RESTART";
-        int promptX = boxX + (boxW - fmPrompt.stringWidth(prompt)) / 2;
-        g.setColor(new Color(175, 175, 175));
-        g.drawString(prompt, promptX, boxY + 225);
+        
     }
 
     /**
@@ -267,6 +513,7 @@ public class GUI {
     private void loadHeartImages() {
         try {
             BufferedImage fullRaw = loadImage("res/heart/heart_full.png");
+            BufferedImage halfRaw = loadImage("res/heart/heart_half.png");
             BufferedImage emptyRaw = loadImage("res/heart/heart_empty.png");
 
             // Crop the actual heart graphic (13x13) to eliminate empty transparent margins
@@ -274,6 +521,12 @@ public class GUI {
                 heartFull = fullRaw.getSubimage(9, 7, 13, 13);
             } else {
                 heartFull = fullRaw;
+            }
+
+            if (halfRaw != null && halfRaw.getWidth() >= 22 && halfRaw.getHeight() >= 20) {
+                heartHalf = halfRaw.getSubimage(9, 7, 13, 13);
+            } else {
+                heartHalf = halfRaw;
             }
 
             if (emptyRaw != null && emptyRaw.getWidth() >= 22 && emptyRaw.getHeight() >= 20) {
