@@ -63,6 +63,9 @@ public class GreenFireball extends GameOBJ {
 
             try {
                   InputStream stream = getClass().getResourceAsStream("/enemy/green_fireball.png");
+                  if (stream == null) {
+                        stream = getClass().getResourceAsStream("/res/enemy/green_fireball.png");
+                  }
                   if (stream != null) {
                         fireballImage = ImageIO.read(stream);
                         return;

@@ -54,6 +54,9 @@ public class Graphic {
         try {
             String resPath = "/" + imagePath.replaceFirst("^res/", "");
             InputStream stream = getClass().getResourceAsStream(resPath);
+            if (stream == null) {
+                stream = getClass().getResourceAsStream("/" + imagePath);
+            }
             if (stream != null) {
                 bgImage = ImageIO.read(stream);
                 return;

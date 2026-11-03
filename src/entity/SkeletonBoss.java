@@ -40,6 +40,9 @@ public class SkeletonBoss extends Enemy {
       private void loadBossSprite() {
             try {
                   InputStream stream = getClass().getResourceAsStream("/enemy/skeleton_boss.png");
+                  if (stream == null) {
+                        stream = getClass().getResourceAsStream("/res/enemy/skeleton_boss.png");
+                  }
                   if (stream != null) {
                         bossSprite = ImageIO.read(stream);
                         return;

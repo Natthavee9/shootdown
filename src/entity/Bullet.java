@@ -36,6 +36,9 @@ public class Bullet extends GameOBJ {
 
             try {
                   InputStream stream = getClass().getResourceAsStream("/player/bullet_fireball.png");
+                  if (stream == null) {
+                        stream = getClass().getResourceAsStream("/res/player/bullet_fireball.png");
+                  }
                   if (stream != null) {
                         fireballImage = ImageIO.read(stream);
                         return;

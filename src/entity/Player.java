@@ -139,6 +139,9 @@ public class Player extends GameOBJ {
       private BufferedImage loadImage(String path) {
             try {
                   InputStream stream = getClass().getResourceAsStream("/" + path.replaceFirst("^res/", ""));
+                  if (stream == null) {
+                        stream = getClass().getResourceAsStream("/" + path);
+                  }
                   if (stream != null) {
                         return ImageIO.read(stream);
                   }
