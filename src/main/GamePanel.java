@@ -1,8 +1,6 @@
 package main;
 
 import background.Background;
-import background.GUI;
-import background.Graphic;
 import entity.Bullet;
 import entity.Enemy;
 import entity.GreenFireball;
@@ -490,3 +488,8 @@ public class GamePanel extends JPanel implements Runnable {
             return (background != null && background.getGraphic() != null) ? background.getGraphic().getBgImage() : null;
       }
 }
+
+
+
+
+     

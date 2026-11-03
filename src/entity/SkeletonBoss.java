@@ -126,7 +126,7 @@ public class SkeletonBoss extends Enemy {
 
       /**
        * Launch green fireball aiming in a straight line based on player position and horizontal movement
-       * ("ยิงตามการเคลื่อนที่ของ player แบบเป็นทางตรง ไม่ต้องแบบเลี้ยวตามการกระโดด")
+       * ("ยิงตามการเคลื่อนที่ของ player แบบเป็นทางตรง")
        */
       private void shootGreenFireball() {
             if (gp == null || !alive) return;
